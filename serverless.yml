@@ -1,0 +1,77 @@
+service: herocast-stripe
+
+custom:
+  stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+  stage: ${opt:stage, self:provider.stage}
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: dev
+  region: eu-west-1
+  apiKeys:
+    - stripeKey
+  role: arn:aws:iam::163410335292:role/stripe
+
+  #iamRoleStatements:
+  #  - Effect: Allow
+  #    Action:
+  #      - dynamodb:DescribeTable
+  #      - dynamodb:Query
+  #      - dynamodb:Scan
+  #      - dynamodb:GetItem
+  #      - dynamodb:BatchGetItem
+  #    Resource: "arn:aws:dynamodb:eu-west-1:163410335292:table/stripe"
+  #  - Effect: Allow
+  #    Action:
+  #      - dynamodb:DescribeTable
+  #      - dynamodb:Query
+  #      - dynamodb:Scan
+  #      - dynamodb:GetItem
+  #      - dynamodb:BatchGetItem
+  #    Resource: "arn:aws:dynamodb:eu-west-1:163410335292:table/users"
+
+functions:
+  connectAccount:
+    handler: lambda/connect-account.main
+    events:
+      - http:
+          path: stripe-connect
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+
+  createCard:
+    handler: lambda/add-card.main
+    events:
+      - http:
+          path: create-card
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+
+  getCards:
+    handler: lambda/user-cards.main
+    events:
+      - http:
+          path: user-cards
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+
+  deleteCard:
+    handler: lambda/delete-card.main
+    events:
+      - http:
+          path: del-card
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
