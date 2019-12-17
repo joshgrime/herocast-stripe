@@ -63,7 +63,7 @@ module.exports = {
                   };
                   console.log('Creating stripe customer in herocast');
                   await dynamoDbLib.call("put", params2);
-                  console.log('Creeted stripe customer in herocast, going to create card');
+                  console.log('Created stripe customer in herocast, going to create card');
 
                   addCard(customer.id, postbody.card);
                   }

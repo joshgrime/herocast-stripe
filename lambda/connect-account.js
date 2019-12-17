@@ -1,37 +1,52 @@
 const dynamoDbLib = require("./libs/dynamodb-lib");
 const response = require("./libs/response-lib");
+const stripe = require('stripe')('sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z');
 
 module.exports = {
     main: async function (event) {
     
     var postbody = JSON.parse(event.body);
+
+    try {
+    var token = await stripe.oauth.token({ 
+      grant_type: 'authorization_code',
+      code: postbody.stripe_code,
+    });
+
+    console.log(token);
   
       const params = {
           TableName: 'stripe',
           Item: {
               id: postbody.user_id,
-              stripe_acc_id: postbody.stripe_account_id,
-              access_token: postbody.access_token,
-              refresh_token: postbody.refresh_token
+              stripe_acc_id: token.stripe_user_id,
+              access_token: token.access_token,
+              refresh_token: token.refresh_token
           }
       };
 
-      const params2 = {
+      const updateParams = {
         TableName: 'users',
-        Item: {
-            id: postbody.user_id,
-            stripeConnected: 1
+        Key: {
+          id: postbody.user_id
+        },
+        UpdateExpression: 'SET #sc = :s',
+        ExpressionAttributeNames: {
+          '#sc' : 'stripeConnected'
+        },
+        ExpressionAttributeValues: {
+          ':s' : 1
         }
-    };
+      };
   
-      try {
         var details = await dynamoDbLib.call("put", params);
-        var details2 = await dynamoDbLib.call("put", params2);
+        var details2 = await dynamoDbLib.call("update", updateParams);
         return response.success({status: true});
-      } catch (e) {
+     
+   } catch (e) {
         console.log('Big error!');
         console.log(e);
         return response.failure({ status: false, error: e });
       }
-    }
   }
+}

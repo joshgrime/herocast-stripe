@@ -75,3 +75,14 @@ functions:
           private: true
     environmentVariables:
       stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+
+  generateCheckoutLink:
+    handler: lambda/generate-checkout-link.main
+    events:
+      - http:
+          path: link-gen
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
