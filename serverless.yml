@@ -86,3 +86,43 @@ functions:
           private: true
     environmentVariables:
       stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+
+  generateDashboardLink:
+    handler: lambda/stripe-dashboard.main
+    events:
+      - http:
+          path: stripe-dashboard
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+      
+  getBalance:
+    handler: lambda/get-balance.main
+    events:
+      - http:
+          path: get-balance
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+
+  checkoutComplete:
+    handler: lambda/checkout-complete.main
+    events:
+      - http:
+          path: checkout-complete
+          method: post
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
+
+  getSession:
+    handler: lambda/get-session.main
+    events:
+      - http:
+          path: get-session
+          method: post
+          cors: true
+          private: true

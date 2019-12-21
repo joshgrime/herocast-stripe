@@ -10,8 +10,6 @@ module.exports = {
     
     var postbody = JSON.parse(event.body);
 
-    if (postbody.user_id === postbody.host_id) return response.failure({status: false, error: 'You cannot book a slot with yourself.'});
-
     const userParams = {
         "TableName": 'stripe',
         "Key": {
@@ -42,6 +40,7 @@ module.exports = {
         var slotDetails = await dynamoDbLib.call("get", slotParams);
         if (slotDetails.Item === undefined) return response.failure({status: false, error: 'Slot does not exist.'});
         if (slotDetails.Item.booked !== 0) return response.failure({status: false, error: 'Slot is already booked.'});
+        if (postbody.user_id === slotDetails.Item.hostid) return response.failure({status: false, error: 'You cannot book a slot with yourself.'});
 
         var date = new Date();
         var date2 = date.getTime();
@@ -86,10 +85,11 @@ module.exports = {
                 currency: currency,
                 quantity: 1,
             }],
-            success_url: 'https://herocast.gg/booking-success?tkn={CHECKOUT_SESSION_ID}',
+            success_url: 'https://herocast.gg/booking-success?tkn={CHECKOUT_SESSION_ID}&slot='+slotDetails.Item.id,
             cancel_url: cancelUrl,
             mode: 'payment',
-            submit_type: 'book'
+            submit_type: 'book',
+            client_reference_id: postbody.user_id
         };
 
         var userDetails = await dynamoDbLib.call("get", userParams);
@@ -99,6 +99,40 @@ module.exports = {
         }
 
         const session = await stripe.checkout.sessions.create(stripeBody);
+
+        const gameDetailsParams = {
+          "TableName": 'games',
+          "Key": {
+            "id":postbody.game
+          },
+          "ProjectionExpression": "#n",
+          "ExpressionAttributeNames": {
+            '#n' : 'name'
+          }
+        }
+        var gameDetails = await dynamoDbLib.call("get", gameDetailsParams);
+        var gameName = gameDetails.Item.name;
+
+        const newTransactParams = {
+          TableName: 'transactions',
+          Item: {
+            id: session.id,
+            slotid: postbody.slot_id,
+            time: date2,
+            locale: session.locale,
+            amount: price,
+            gameid: postbody.game,
+            game: gameName,
+            hostid: slotDetails.Item.hostid,
+            playerid: postbody.user_id,
+            type: postbody.type,
+            completed: 0,
+            timedex: slotDetails.Item.timedex,
+            localtime: slotDetails.Item.localtime
+          }
+        };
+        
+        var updateTransactTable = await dynamoDbLib.call("put", newTransactParams);
         return response.success({status: true, data: session});
       } catch (e) {
         console.log('Big error!');
