@@ -107,7 +107,7 @@ module.exports = {
                           }
                           else {
                             console.log('Card created');
-                            bigResolve('Major Success');
+                            bigResolve(card);
                           }
                         }
                       );
