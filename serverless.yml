@@ -6,7 +6,7 @@ custom:
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs12.x
   stage: dev
   region: eu-west-1
   apiKeys:
@@ -126,3 +126,14 @@ functions:
           method: post
           cors: true
           private: true
+  
+  makeBooking:
+    handler: lambda/make-booking.main
+    events:
+      - http:
+          path: confirm-booking
+          method: post
+          cors: true
+          private: true
+    environmentVariables:
+      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
