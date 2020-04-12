@@ -21,7 +21,11 @@ module.exports = {
     if (postbody.type === 'coach') gameprice = 'coachprice';
     else if (postbody.type === 'vs') gameprice  = 'vsprice';
     else if (postbody.type === 'casual') gameprice = 'casualprice';
+    else if (postbody.type === 'multi') gameprice = 'multiprice';
+
     else return response.failure({status: false, errorMessage: 'No valid game type specified'});
+
+    var projectionExp = "id, booked, console, #gameprice, locale, #d, #t, playerids, maxSlots, slotsBooked, game, #lt";
 
     const params = {
         "TableName": "gameslots",
@@ -29,10 +33,11 @@ module.exports = {
             "id":postbody.slotid,
             "hostid":postbody.hostid
         },
-        "ProjectionExpression": "id, booked, console, #gameprice, locale, #d, #t",
+        "ProjectionExpression": projectionExp,
         "ExpressionAttributeNames": {
           '#d': 'date',
           '#t': 'time',
+          '#lt': 'localtime',
           "#gameprice": gameprice
         }
     };
@@ -44,12 +49,43 @@ module.exports = {
       date2 /= 1000;
 
       if (gameslotDetails.Item.timedex < date2) return response.failure({status: false, errorMessage: 'Slot is in the past.'});
-      if (gameslotDetails.Item.booked !==0) return response.failure({status: false, errorMessage: 'Game is already fully booked.'});
+      if (gameslotDetails.Item.booked !==0 && postbody.type !== 'multi') return response.failure({status: false, errorMessage: 'Game is already fully booked.'});
+      if (gameslotDetails.Item.booked !==0 && postbody.type === 'multi' && (gameslotDetails.Item.maxSlots <= gameslotDetails.Item.slotsBooked)) return response.failure({status: false, errorMessage: 'Game is already fully booked.'});
 
+      var multi_pids;
+
+      if (postbody.type === 'multi') {
+         multi_pids = JSON.parse(gameslotDetails.Item.playerids);
+         if (multi_pids.length > 0) {
+          var mpidCheck = multi_pids.filter(player=>{
+            return player.id === postbody.userid;
+          });
+          if (mpidCheck.length > 0) return response.failure({status: false, errorMessage: 'User is already booked onto this multi-gameslot.'});
+         }
+      }
+      var gameid = postbody.type === 'multi' ? gameslotDetails.Item.game : postbody.game;
+
+      if (postbody.type !== 'multi') {
+          
+        const hostParams = {
+          "TableName": 'users',
+          "Key": {
+            "id":postbody.hostid
+          },
+          "ProjectionExpression": "games"
+        }
+
+        var hostGameDetails = await dynamoDbLib.call("get", hostParams);
+        var hostGames = JSON.parse(hostGameDetails.Item.games);
+        var hostGameCheck = hostGames.filter(x=>{
+          return x === gameid
+        });
+        if (hostGameCheck.length === 0) return response.failure({status: false, errorMessage: 'Host does not have selected game on their profile.'}); 
+      }
         const gameDetailsParams = {
           "TableName": 'games',
           "Key": {
-            "id":postbody.game
+            "id":gameid
           },
           "ProjectionExpression": "#n",
           "ExpressionAttributeNames": {
@@ -57,6 +93,7 @@ module.exports = {
           }
         }
         var gameDetails = await dynamoDbLib.call("get", gameDetailsParams);
+
         var gameName = gameDetails.Item.name;
 
         const connectedAccountParams = {
@@ -130,37 +167,89 @@ module.exports = {
                
       if (makePayment.status !== 'succeeded') return response.failure({status: false, errorMessage: makePayment.status});
 
+    var updateExpression, ExpressionAttributeNames, ExpressionAttributeValues;
+
+      if (multi_pids !== null) {
+        multi_pids.push({id:postbody.userid, ingamename: postbody.ingamename});
+        var newSlotsBooked = multi_pids.length;
+        var newStatus = gameslotDetails.Item.maxSlots <= newSlotsBooked ? 'booked' : 'open';
+        var newPlayerIds = JSON.stringify(multi_pids);
+        updateExpression = 'SET #b = :true, #p = :ids, #gn = :gameName, #s = :status, #t = :type, #sb = :slotsBooked';
+        ExpressionAttributeNames ={
+          '#b' : 'booked',
+          '#p' : 'playerids',
+          '#gn': 'gameName',
+          '#s' : 'status',
+          "#t" : 'type',
+          "#sb": 'slotsBooked'
+        };
+        ExpressionAttributeValues = {
+          ':true' : 1,
+          ':ids' : newPlayerIds,
+          ':gameName' : gameName,
+          ':status' : newStatus,
+          ':type': postbody.type,
+          ':slotsBooked': newSlotsBooked
+        };
+
+      }
+      else {
+        updateExpression = 'SET #b = :true, #p = :id, #g = :game, #gn = :gameName, #s = :status, #t = :type, #pign = :playerign';
+        ExpressionAttributeNames ={
+          '#b' : 'booked',
+          '#p' : 'playerid',
+          '#g' : 'game',
+          '#gn': 'gameName',
+          '#s' : 'status',
+          "#t" : 'type',
+          '#pign':'playeringamename'
+        };
+        ExpressionAttributeValues = {
+          ':true' : 1,
+          ':id' : postbody.userid,
+          ':game' : postbody.game,
+          ':gameName' : gameName,
+          ':status' : 'booked',
+          ':playerign': postbody.ingamename,
+          ':type': postbody.type
+        };
+      }
+
         const updateGameSlotParams = {
             "TableName": 'gameslots',
             "Key": {
               "id": postbody.slotid,
               "hostid": postbody.hostid
             },
-            "UpdateExpression": 'SET #b = :true, #p = :id, #g = :game, #gn = :gameName, #s = :status, #t = :type, #pign = :playerign',
-            "ExpressionAttributeNames": {
-              '#b' : 'booked',
-              '#p' : 'playerid',
-              '#g' : 'game',
-              '#gn': 'gameName',
-              '#s' : 'status',
-              "#t" : 'type',
-              '#pign':'playeringamename'
-            },
-            "ExpressionAttributeValues": {
-                ':true' : 1,
-                ':id' : postbody.userid,
-                ':game' : postbody.game,
-                ':gameName' : gameName,
-                ':status' : 'booked',
-                ':playerign': postbody.ingamename,
-                ':type': postbody.type
-            }
+            "UpdateExpression": updateExpression,
+            "ExpressionAttributeNames": ExpressionAttributeNames,
+            "ExpressionAttributeValues": ExpressionAttributeValues 
           };
 
           var successFullyBookedGame = await dynamoDbLib.call('update', updateGameSlotParams);
+
+          var d = new Date();
+          var recordId = d.getTime();
+
+          if (multi_pids !== null) {
+            const createQuickMapParams = {
+              "TableName": 'gameslots-multi-map',
+              "Item": {
+                "timestamp": recordId,
+                "playerid": postbody.userid,
+                "hostid":postbody.hostid,
+                "slotid": postbody.slotid,
+                "game": gameName,
+                "date": gameslotDetails.Item.date,
+                "time": gameslotDetails.Item.time,
+                "localtime": gameDetails.Item.localtime
+              }
+            };
+            var createQuickMap = await dynamoDbLib.call('put', createQuickMapParams);
+          }
           return response.success({status: true});
     } catch (e) {
-      return response.failure({ status: false, errorMessage: e });
+      return response.failure({ status: false, errorMessage: 'There was a problem. Please try again later.', e:e });
     }
   }
 }
