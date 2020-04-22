@@ -1,8 +1,7 @@
 service: herocast-stripe
 
-custom:
-  stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
-  stage: ${opt:stage, self:provider.stage}
+plugins:
+  - serverless-dotenv-plugin
 
 provider:
   name: aws
@@ -12,24 +11,8 @@ provider:
   apiKeys:
     - stripeKey
   role: arn:aws:iam::163410335292:role/stripe
-
-  #iamRoleStatements:
-  #  - Effect: Allow
-  #    Action:
-  #      - dynamodb:DescribeTable
-  #      - dynamodb:Query
-  #      - dynamodb:Scan
-  #      - dynamodb:GetItem
-  #      - dynamodb:BatchGetItem
-  #    Resource: "arn:aws:dynamodb:eu-west-1:163410335292:table/stripe"
-  #  - Effect: Allow
-  #    Action:
-  #      - dynamodb:DescribeTable
-  #      - dynamodb:Query
-  #      - dynamodb:Scan
-  #      - dynamodb:GetItem
-  #      - dynamodb:BatchGetItem
-  #    Resource: "arn:aws:dynamodb:eu-west-1:163410335292:table/users"
+  environment:
+      stripeSecretKey: ${env:STRIPEKEY}
 
 functions:
   connectAccount:
@@ -40,8 +23,6 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
 
   createCard:
     handler: lambda/add-card.main
@@ -51,8 +32,6 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
 
   getCards:
     handler: lambda/user-cards.main
@@ -62,8 +41,6 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
 
   deleteCard:
     handler: lambda/delete-card.main
@@ -73,8 +50,6 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
 
   generateCheckoutLink:
     handler: lambda/generate-checkout-link.main
@@ -84,8 +59,6 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
 
   generateDashboardLink:
     handler: lambda/stripe-dashboard.main
@@ -95,8 +68,6 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
       
   getBalance:
     handler: lambda/get-balance.main
@@ -106,8 +77,6 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z
 
   getSession:
     handler: lambda/get-session.main
@@ -126,5 +95,3 @@ functions:
           method: post
           cors: true
           private: true
-    environmentVariables:
-      stripeSecretKey: sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z

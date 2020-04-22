@@ -1,6 +1,6 @@
 const dynamoDbLib = require("./libs/dynamodb-lib");
 const response = require("./libs/response-lib");
-const stripe = require('stripe')('sk_test_gP2WNcsVXhZU2lqTXcsrkyGT00ZpopO00Z');
+const stripe = require('stripe')(process.env.stripeSecretKey);
 
 module.exports = {
     main: async function (event) {
