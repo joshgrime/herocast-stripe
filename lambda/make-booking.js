@@ -3,7 +3,7 @@ const dynamoDbLib = require("./libs/dynamodb-lib");
 const response = require("./libs/response-lib");
 const stripe = require('stripe')(process.env.stripeSecretKey);
 const platform_cut = 0.12; //12%
-const platform_fee = 1; //a dollar!
+const platform_fee = 100; //a dollar!
 
 
 module.exports = {
@@ -131,8 +131,8 @@ module.exports = {
 
         var price = gameslotDetails.Item[gameprice];
         var initial_price = price;
-        var fee = Math.floor(price*platform_cut) + platform_fee;
-        var after_price = price - Math.floor(price*platform_cut);
+        var fee = Math.floor(initial_price*platform_cut) + platform_fee;
+        var after_price = price - Math.floor(initial_price*platform_cut);
         price += platform_fee;
        
         function stripePromise(){
@@ -265,9 +265,9 @@ module.exports = {
             "hostemail":hostGameDetails.Item.email,
             "hostid":postbody.hostid,
             "playerid":postbody.userid,
-            "totalPrice": price,
-            "afterPrice": after_price,
-            "bookingFee": platform_fee,
+            "totalPrice": price/100,
+            "afterPrice": after_price/100,
+            "bookingFee": platform_fee/100,
             "appCut":platform_cut,
             "currency":currency,
             "slot": {
