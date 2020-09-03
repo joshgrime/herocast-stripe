@@ -10,7 +10,7 @@ provider:
   region: eu-west-1
   apiKeys:
     - stripeKey
-  role: arn:aws:iam::163410335292:role/stripe
+  role: ${env:STRIPEARN}
   environment:
       stripeSecretKey: ${env:STRIPEKEY}
 
